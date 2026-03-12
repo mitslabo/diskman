@@ -114,7 +114,12 @@ func (m *modelState) updateDisk(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.screen = scrAction
 			m.dstSlot = -1
 		} else {
-			m.screen = scrEnclosure
+			if m.skipEnclosure {
+				m.screen = scrSrc
+			} else {
+				m.screen = scrEnclosure
+			}
+			m.srcSlot = -1
 		}
 	}
 	return m, nil

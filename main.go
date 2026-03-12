@@ -19,13 +19,20 @@ func main() {
 		*dryRun = true
 	}
 
-	cfg, err := config.Load(*configPath)
+	configSpecified := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "config" {
+			configSpecified = true
+		}
+	})
+
+	cfg, loadedFromFile, err := config.Load(*configPath, configSpecified)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "config load error:", err)
 		os.Exit(1)
 	}
 
-	program, err := tui.New(cfg, *dryRun, *debug)
+	program, err := tui.New(cfg, *dryRun, *debug, loadedFromFile)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "init error:", err)
 		os.Exit(1)

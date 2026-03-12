@@ -37,31 +37,32 @@ const (
 )
 
 type modelState struct {
-	cfg          config.Config
-	dryRun       bool
-	debug        bool
-	screen       screen
-	cursor       int
-	row          int
-	col          int
-	selectedEnc  int
-	srcSlot      int
-	dstSlot      int
-	selectedOp   operation
-	actionCursor int
-	confirmCode  string
-	confirmInput string
-	jobs         map[string]*model.Job
-	jobOrder     []string
-	jobCancels   map[string]context.CancelFunc
-	updates      chan runner.Update
-	log          *logger.JSONL
-	status       string
-	jobSel       int
-	jobFocus     bool
-	cancelPopup  bool
-	cancelChoice int
-	cancelJobID  string
+	cfg           config.Config
+	dryRun        bool
+	debug         bool
+	screen        screen
+	cursor        int
+	row           int
+	col           int
+	selectedEnc   int
+	srcSlot       int
+	dstSlot       int
+	selectedOp    operation
+	actionCursor  int
+	confirmCode   string
+	confirmInput  string
+	jobs          map[string]*model.Job
+	jobOrder      []string
+	jobCancels    map[string]context.CancelFunc
+	updates       chan runner.Update
+	log           *logger.JSONL
+	status        string
+	jobSel        int
+	jobFocus      bool
+	skipEnclosure bool
+	cancelPopup   bool
+	cancelChoice  int
+	cancelJobID   string
 }
 
 type tickMsg time.Time
@@ -76,23 +77,44 @@ func waitUpdate(ch <-chan runner.Update) tea.Cmd {
 	return func() tea.Msg { return updateMsg(<-ch) }
 }
 
-func New(cfg config.Config, dryRun bool, debug bool) (*tea.Program, error) {
+func defaultEnclosureIndex(enclosures []config.Enclosure) int {
+	best := 0
+	bestSlots := -1
+	for i, e := range enclosures {
+		slots := e.Rows * e.Cols
+		if slots > bestSlots {
+			best = i
+			bestSlots = slots
+		}
+	}
+	return best
+}
+
+func New(cfg config.Config, dryRun bool, debug bool, skipEnclosure bool) (*tea.Program, error) {
+	if len(cfg.Enclosures) == 0 {
+		return nil, fmt.Errorf("at least one enclosure is required")
+	}
 	l, err := logger.New(cfg.LogFile)
 	if err != nil {
 		return nil, err
 	}
 	m := &modelState{
-		cfg:        cfg,
-		dryRun:     dryRun,
-		debug:      debug,
-		screen:     scrEnclosure,
-		srcSlot:    -1,
-		dstSlot:    -1,
-		selectedOp: opCopy,
-		jobs:       map[string]*model.Job{},
-		jobCancels: map[string]context.CancelFunc{},
-		updates:    make(chan runner.Update, 256),
-		log:        l,
+		cfg:           cfg,
+		dryRun:        dryRun,
+		debug:         debug,
+		screen:        scrEnclosure,
+		selectedEnc:   defaultEnclosureIndex(cfg.Enclosures),
+		skipEnclosure: skipEnclosure,
+		srcSlot:       -1,
+		dstSlot:       -1,
+		selectedOp:    opCopy,
+		jobs:          map[string]*model.Job{},
+		jobCancels:    map[string]context.CancelFunc{},
+		updates:       make(chan runner.Update, 256),
+		log:           l,
+	}
+	if skipEnclosure {
+		m.screen = scrSrc
 	}
 	p := tea.NewProgram(m)
 	return p, nil

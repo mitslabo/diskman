@@ -17,63 +17,34 @@ func expandHome(path string) string {
 	return path
 }
 
-// Load returns merged config from built-in defaults and optional user file.
-func Load(path string) (Config, error) {
-	cfg := defaultConfig()
+// Load returns config and whether it was loaded from a file.
+// If configSpecified is true, missing file is an error.
+func Load(path string, configSpecified bool) (Config, bool, error) {
+	defaultCfg := defaultConfig()
 	if path == "" {
-		return cfg, nil
+		return defaultCfg, false, nil
 	}
 	path = expandHome(path)
 	b, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return cfg, nil
+			if !configSpecified {
+				return defaultCfg, false, nil
+			}
+			return Config{}, false, err
 		}
-		return Config{}, err
+		return Config{}, false, err
 	}
 	var userCfg Config
 	if err := json.Unmarshal(b, &userCfg); err != nil {
-		return Config{}, err
+		return Config{}, false, err
 	}
-
-	if userCfg.LogFile != "" {
-		cfg.LogFile = userCfg.LogFile
-	}
-	if userCfg.MapDir != "" {
-		cfg.MapDir = userCfg.MapDir
-	}
-
-	// Merge enclosures by name. Unknown name with full shape info is appended.
-	for _, ue := range userCfg.Enclosures {
-		matched := false
-		for i := range cfg.Enclosures {
-			if cfg.Enclosures[i].Name == ue.Name {
-				matched = true
-				if ue.Rows > 0 && ue.Cols > 0 && len(ue.Grid) > 0 {
-					cfg.Enclosures[i].Rows = ue.Rows
-					cfg.Enclosures[i].Cols = ue.Cols
-					cfg.Enclosures[i].Grid = ue.Grid
-				}
-				if ue.Devices != nil {
-					cfg.Enclosures[i].Devices = ue.Devices
-				}
-				break
-			}
-		}
-		if !matched {
-			if err := ue.Validate(); err != nil {
-				return Config{}, err
-			}
-			cfg.Enclosures = append(cfg.Enclosures, ue)
-		}
-	}
-
-	for _, e := range cfg.Enclosures {
+	for _, e := range userCfg.Enclosures {
 		if err := e.Validate(); err != nil {
-			return Config{}, err
+			return Config{}, false, err
 		}
 	}
-	cfg.LogFile = expandHome(cfg.LogFile)
-	cfg.MapDir = expandHome(cfg.MapDir)
-	return cfg, nil
+	userCfg.LogFile = expandHome(userCfg.LogFile)
+	userCfg.MapDir = expandHome(userCfg.MapDir)
+	return userCfg, true, nil
 }
