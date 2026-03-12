@@ -45,15 +45,6 @@ func (m *modelState) updateConfirm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *modelState) viewConfirm() string {
-	const popupInnerWidth = 40
-	center := func(rendered, plain string) string {
-		if len(plain) >= popupInnerWidth {
-			return plain[:popupInnerWidth]
-		}
-		left := (popupInnerWidth - len(plain)) / 2
-		right := popupInnerWidth - len(plain) - left
-		return strings.Repeat(" ", left) + rendered + strings.Repeat(" ", right)
-	}
 	if m.confirmCode == "" {
 		m.confirmCode = randomConfirmCode()
 	}
@@ -64,13 +55,12 @@ func (m *modelState) viewConfirm() string {
 		actionLine = fmt.Sprintf("ERASE Slot%02d", m.srcSlot)
 	}
 	masked := strings.Repeat("*", len(m.confirmInput))
-	var b strings.Builder
-	b.WriteString("\n+------------------------------------------+\n")
-	b.WriteString(fmt.Sprintf("| %s |\n", center(title, title)))
-	b.WriteString(fmt.Sprintf("| %s |\n", center(actionLine, actionLine)))
-	b.WriteString(fmt.Sprintf("| %s |\n", center("", "")))
-	b.WriteString(fmt.Sprintf("| %s |\n", center("Code: "+m.confirmCode, "Code: "+m.confirmCode)))
-	b.WriteString(fmt.Sprintf("| %s |\n", center("Input: "+masked, "Input: "+masked)))
-	b.WriteString("+------------------------------------------+")
-	return b.String()
+	lines := []string{
+		popupCenter(title, title),
+		popupCenter(actionLine, actionLine),
+		popupCenter("", ""),
+		popupCenter("Code: "+m.confirmCode, "Code: "+m.confirmCode),
+		popupCenter("Input: "+masked, "Input: "+masked),
+	}
+	return popupFrame(lines)
 }

@@ -199,15 +199,6 @@ func (m *modelState) viewDisk() string {
 		b.WriteString("- none\n")
 	}
 	if m.cancelPopup {
-		const popupInnerWidth = 40
-		center := func(rendered, plain string) string {
-			if len(plain) >= popupInnerWidth {
-				return plain[:popupInnerWidth]
-			}
-			left := (popupInnerWidth - len(plain)) / 2
-			right := popupInnerWidth - len(plain) - left
-			return strings.Repeat(" ", left) + rendered + strings.Repeat(" ", right)
-		}
 		job := m.jobs[m.cancelJobID]
 		actionLine := "COPY Slot?? -> Slot??"
 		if job != nil {
@@ -242,13 +233,13 @@ func (m *modelState) viewDisk() string {
 		} else {
 			no = style(no, ansiBgWhite+ansiBlack)
 		}
-		choiceLine = center(fmt.Sprintf("%s   %s", yes, no), fmt.Sprintf("%s   %s", "[YES]", "[NO]"))
-		b.WriteString("\n+------------------------------------------+\n")
-		b.WriteString(fmt.Sprintf("| %s |\n", center("Cancel selected job?", "Cancel selected job?")))
-		b.WriteString(fmt.Sprintf("| %s |\n", center(actionLine, actionLine)))
-		b.WriteString(fmt.Sprintf("| %s |\n", center("", "")))
-		b.WriteString(fmt.Sprintf("| %s |\n", choiceLine))
-		b.WriteString("+------------------------------------------+\n")
+		choiceLine = popupCenter(fmt.Sprintf("%s   %s", yes, no), fmt.Sprintf("%s   %s", "[YES]", "[NO]"))
+		b.WriteString(popupFrame([]string{
+			popupCenter("Cancel selected job?", "Cancel selected job?"),
+			popupCenter(actionLine, actionLine),
+			popupCenter("", ""),
+			choiceLine,
+		}) + "\n")
 	}
 	return b.String()
 }
