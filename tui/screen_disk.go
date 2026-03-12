@@ -3,18 +3,48 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"time"
+
+	"diskman/model"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 func (m *modelState) updateDisk(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	e := m.cfg.Enclosures[m.selectedEnc]
+	activeIDs := m.activeJobIDs()
+	if len(activeIDs) == 0 {
+		m.jobSel = 0
+		m.jobFocus = false
+	} else if m.jobSel >= len(activeIDs) {
+		m.jobSel = len(activeIDs) - 1
+	}
 	switch msg.String() {
-	case "up", "k":
+	case "up":
+		if m.jobFocus {
+			if m.jobSel > 0 {
+				m.jobSel--
+			} else {
+				m.jobFocus = false
+			}
+		} else if m.row > 0 {
+			m.row--
+		}
+	case "down":
+		if m.jobFocus {
+			if m.jobSel < len(activeIDs)-1 {
+				m.jobSel++
+			}
+		} else if m.row < e.Rows-1 {
+			m.row++
+		} else if len(activeIDs) > 0 {
+			m.jobFocus = true
+		}
+	case "k":
 		if m.row > 0 {
 			m.row--
 		}
-	case "down", "j":
+	case "j":
 		if m.row < e.Rows-1 {
 			m.row++
 		}
@@ -26,6 +56,18 @@ func (m *modelState) updateDisk(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.col < e.Cols-1 {
 			m.col++
 		}
+	case "c":
+		if len(activeIDs) == 0 || !m.jobFocus {
+			m.status = "no cancellable jobs"
+			return m, nil
+		}
+		id := activeIDs[m.jobSel]
+		cancel := m.jobCancels[id]
+		cancel()
+		if m.log != nil {
+			_ = m.log.Log(map[string]any{"time": time.Now().Format(time.RFC3339), "event": "job_cancel_requested", "id": id})
+		}
+		m.status = "cancel requested"
 	case "enter":
 		slot := e.Grid[m.row][m.col]
 		path := m.devicePath(e, slot)
@@ -47,6 +89,7 @@ func (m *modelState) updateDisk(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.startConfirmation()
 		}
 	case "esc":
+		m.jobFocus = false
 		if m.screen == scrDst {
 			m.screen = scrAction
 			m.dstSlot = -1
@@ -100,10 +143,42 @@ func (m *modelState) viewDisk() string {
 		}
 		b.WriteString("\n")
 	}
-	if m.screen == scrSrc {
-		b.WriteString("\nArrows: move  Enter: select  Esc: back  Tab: jobs")
+	b.WriteString("\nArrows: seamless disk/job move  h/j/k/l: move disk  Enter: select  Esc: back")
+	b.WriteString("\n\nJob status\n")
+	activeIDs := m.activeJobIDs()
+	if len(activeIDs) == 0 {
+		m.jobSel = 0
+	} else if m.jobSel >= len(activeIDs) {
+		m.jobSel = len(activeIDs) - 1
+	}
+	for i, id := range activeIDs {
+		j := m.jobs[id]
+		if j == nil {
+			continue
+		}
+		state := string(j.State)
+		if j.State == model.JobRunning {
+			state = style(state, ansiGreen)
+		}
+		op := j.Op
+		if op == "" {
+			op = "copy"
+		}
+		mark := " "
+		if i == m.jobSel {
+			mark = ">"
+		}
+		line := fmt.Sprintf("%s %s op:%s pass:%d %5.1f%% rate:%s state:%s", mark, j.ID, op, j.Progress.Pass, j.Progress.Percent, j.Progress.Rate, state)
+		if i == m.jobSel && m.jobFocus {
+			line = style(line, ansiRev)
+		}
+		b.WriteString(line + "\n")
+	}
+	if len(activeIDs) == 0 {
+		b.WriteString("- none\n")
 	} else {
-		b.WriteString("\nArrows: move  Enter: select  Esc: back")
+		b.WriteString("Down at last disk row: enter jobs  Up at first job: return to disks\n")
+		b.WriteString("c: cancel selected job (job selection active)\n")
 	}
 	return b.String()
 }

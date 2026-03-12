@@ -52,6 +52,6 @@ func (m *modelState) viewAction() string {
 		}
 		b.WriteString(mark + label + "\n")
 	}
-	b.WriteString("\nEnter: select  Esc: back  Tab: jobs")
+	b.WriteString("\nEnter: select  Esc: back")
 	return b.String()
 }

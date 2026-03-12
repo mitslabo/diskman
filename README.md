@@ -11,7 +11,6 @@ flowchart TB
   destinationDiskSelect["ディスク選択画面<br/>コピー先ディスク選択"]
   confirmByCode["実行確認画面<br/>表示された数字の一致確認"]
   diskInfo["情報表示画面（ダミー）"]
-  jobsView["ジョブ一覧"]
 
   start --> enclosureSelect
   enclosureSelect --> sourceDiskSelect
@@ -21,13 +20,13 @@ flowchart TB
   destinationDiskSelect --> confirmByCode
   operationSelect -- "削除" --> confirmByCode
   confirmByCode --> sourceDiskSelect
+  destinationDiskSelect -. "Esc" .-> operationSelect
+  confirmByCode -. "Esc(コピー)" .-> destinationDiskSelect
+  confirmByCode -. "Esc(削除)" .-> operationSelect
+  operationSelect -. "Esc" .-> sourceDiskSelect
 
   operationSelect -- "情報表示" --> diskInfo
   diskInfo --> sourceDiskSelect
-
-  sourceDiskSelect -. "Tab" .-> jobsView
-  operationSelect -. "Tab" .-> jobsView
-  jobsView -. "Tab" .-> sourceDiskSelect
 ```
 
 ## 利用方法
@@ -42,10 +41,11 @@ go run main.go --debug --dry-run
 
 ### 基本操作
 
-- `↑ ↓ ← →` または `h j k l`: カーソル移動
+- `↑ ↓ ← →` または `h j k l`: ディスクカーソル移動
 - `Enter`: 決定
 - `Esc`: 戻る
-- `Tab`: ジョブ一覧とメイン画面を切り替え
+- `↑ / ↓`: ディスク選択画面でディスクとジョブ一覧をシームレスに移動
+- `c`: ディスク選択画面で選択中ジョブをキャンセル
 - `q`: 終了（実行中ジョブがある場合は終了不可）
 
 ### フロー

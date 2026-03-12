@@ -25,7 +25,6 @@ const (
 	scrDst
 	scrConfirm
 	scrInfo
-	scrJobs
 )
 
 type operation int
@@ -58,7 +57,7 @@ type modelState struct {
 	log          *logger.JSONL
 	status       string
 	jobSel       int
-	viewingJobs  bool
+	jobFocus     bool
 }
 
 type tickMsg time.Time
@@ -103,18 +102,6 @@ func (m *modelState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		s := msg.String()
-		if s == "tab" {
-			if m.screen != scrSrc && m.screen != scrAction && m.screen != scrJobs {
-				return m, nil
-			}
-			m.viewingJobs = !m.viewingJobs
-			if m.viewingJobs {
-				m.screen = scrJobs
-			} else {
-				m.screen = scrSrc
-			}
-			return m, nil
-		}
 		if s == "q" {
 			if m.hasRunningJobs() {
 				m.status = "running jobs exist; cancel or wait"
@@ -139,9 +126,6 @@ func (m *modelState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.screen == scrInfo {
 			return m.updateInfo(msg)
-		}
-		if m.screen == scrJobs {
-			return m.updateJobs(msg)
 		}
 	case updateMsg:
 		u := runner.Update(msg)
@@ -185,9 +169,8 @@ func (m *modelState) View() string {
 		return head + "\n\n" + m.viewConfirm()
 	case scrInfo:
 		return head + "\n\n" + m.viewInfo()
-	default:
-		return head + "\n\n" + m.viewJobs()
 	}
+	return head
 }
 
 func (m *modelState) hasRunningJobs() bool {
@@ -197,6 +180,24 @@ func (m *modelState) hasRunningJobs() bool {
 		}
 	}
 	return false
+}
+
+func (m *modelState) activeJobIDs() []string {
+	ids := make([]string, 0, len(m.jobOrder))
+	for _, id := range m.jobOrder {
+		j := m.jobs[id]
+		if j == nil {
+			continue
+		}
+		if j.State != model.JobPending && j.State != model.JobRunning {
+			continue
+		}
+		if _, ok := m.jobCancels[id]; !ok {
+			continue
+		}
+		ids = append(ids, id)
+	}
+	return ids
 }
 
 func (m *modelState) startCopyJob() {
@@ -294,6 +295,7 @@ func (m *modelState) resetToSourceSelection() {
 	m.srcSlot, m.dstSlot = -1, -1
 	m.selectedOp = opCopy
 	m.actionCursor = 0
+	m.jobFocus = false
 	m.confirmCode = ""
 	m.confirmInput = ""
 }
