@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"diskman/config"
@@ -58,6 +59,9 @@ type modelState struct {
 	status       string
 	jobSel       int
 	jobFocus     bool
+	cancelPopup  bool
+	cancelChoice int
+	cancelJobID  string
 }
 
 type tickMsg time.Time
@@ -200,6 +204,43 @@ func (m *modelState) activeJobIDs() []string {
 	return ids
 }
 
+func (m *modelState) slotLabelForJobPath(job *model.Job, path string) string {
+	if job != nil {
+		for _, e := range m.cfg.Enclosures {
+			if e.Name != job.Name {
+				continue
+			}
+			for k, v := range e.Devices {
+				if v != path {
+					continue
+				}
+				n, err := strconv.Atoi(k)
+				if err != nil {
+					return "Slot" + k
+				}
+				return fmt.Sprintf("Slot%02d", n)
+			}
+		}
+	}
+	end := len(path)
+	start := end
+	for start > 0 {
+		c := path[start-1]
+		if c < '0' || c > '9' {
+			break
+		}
+		start--
+	}
+	if start < end {
+		n, err := strconv.Atoi(path[start:end])
+		if err == nil {
+			return fmt.Sprintf("Slot%02d", n)
+		}
+		return "Slot" + path[start:end]
+	}
+	return "Slot??"
+}
+
 func (m *modelState) startCopyJob() {
 	e := m.cfg.Enclosures[m.selectedEnc]
 	src := m.devicePath(e, m.srcSlot)
@@ -296,6 +337,9 @@ func (m *modelState) resetToSourceSelection() {
 	m.selectedOp = opCopy
 	m.actionCursor = 0
 	m.jobFocus = false
+	m.cancelPopup = false
+	m.cancelChoice = 0
+	m.cancelJobID = ""
 	m.confirmCode = ""
 	m.confirmInput = ""
 }

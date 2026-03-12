@@ -7,7 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-var actionLabels = []string{"コピー", "削除", "情報表示"}
+var actionLabels = []string{"COPY", "ERASE", "INFO"}
 
 func (m *modelState) updateAction(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {

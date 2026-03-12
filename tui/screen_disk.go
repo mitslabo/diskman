@@ -16,8 +16,34 @@ func (m *modelState) updateDisk(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if len(activeIDs) == 0 {
 		m.jobSel = 0
 		m.jobFocus = false
+		m.cancelPopup = false
+		m.cancelJobID = ""
 	} else if m.jobSel >= len(activeIDs) {
 		m.jobSel = len(activeIDs) - 1
+	}
+	if m.cancelPopup {
+		switch msg.String() {
+		case "left", "h":
+			m.cancelChoice = 0
+		case "right", "l":
+			m.cancelChoice = 1
+		case "esc":
+			m.cancelPopup = false
+			m.cancelJobID = ""
+		case "enter":
+			if m.cancelChoice == 0 {
+				if cancel, ok := m.jobCancels[m.cancelJobID]; ok {
+					cancel()
+					if m.log != nil {
+						_ = m.log.Log(map[string]any{"time": time.Now().Format(time.RFC3339), "event": "job_cancel_requested", "id": m.cancelJobID})
+					}
+					m.status = "cancel requested"
+				}
+			}
+			m.cancelPopup = false
+			m.cancelJobID = ""
+		}
+		return m, nil
 	}
 	switch msg.String() {
 	case "up":
@@ -56,19 +82,13 @@ func (m *modelState) updateDisk(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.col < e.Cols-1 {
 			m.col++
 		}
-	case "c":
-		if len(activeIDs) == 0 || !m.jobFocus {
-			m.status = "no cancellable jobs"
+	case "enter":
+		if len(activeIDs) > 0 && m.jobFocus {
+			m.cancelPopup = true
+			m.cancelChoice = 0
+			m.cancelJobID = activeIDs[m.jobSel]
 			return m, nil
 		}
-		id := activeIDs[m.jobSel]
-		cancel := m.jobCancels[id]
-		cancel()
-		if m.log != nil {
-			_ = m.log.Log(map[string]any{"time": time.Now().Format(time.RFC3339), "event": "job_cancel_requested", "id": id})
-		}
-		m.status = "cancel requested"
-	case "enter":
 		slot := e.Grid[m.row][m.col]
 		path := m.devicePath(e, slot)
 		if m.isDeviceBusy(path) {
@@ -90,6 +110,8 @@ func (m *modelState) updateDisk(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "esc":
 		m.jobFocus = false
+		m.cancelPopup = false
+		m.cancelJobID = ""
 		if m.screen == scrDst {
 			m.screen = scrAction
 			m.dstSlot = -1
@@ -143,7 +165,6 @@ func (m *modelState) viewDisk() string {
 		}
 		b.WriteString("\n")
 	}
-	b.WriteString("\nArrows: seamless disk/job move  h/j/k/l: move disk  Enter: select  Esc: back")
 	b.WriteString("\n\nJob status\n")
 	activeIDs := m.activeJobIDs()
 	if len(activeIDs) == 0 {
@@ -176,9 +197,58 @@ func (m *modelState) viewDisk() string {
 	}
 	if len(activeIDs) == 0 {
 		b.WriteString("- none\n")
-	} else {
-		b.WriteString("Down at last disk row: enter jobs  Up at first job: return to disks\n")
-		b.WriteString("c: cancel selected job (job selection active)\n")
+	}
+	if m.cancelPopup {
+		const popupInnerWidth = 40
+		center := func(rendered, plain string) string {
+			if len(plain) >= popupInnerWidth {
+				return plain[:popupInnerWidth]
+			}
+			left := (popupInnerWidth - len(plain)) / 2
+			right := popupInnerWidth - len(plain) - left
+			return strings.Repeat(" ", left) + rendered + strings.Repeat(" ", right)
+		}
+		job := m.jobs[m.cancelJobID]
+		actionLine := "COPY Slot?? -> Slot??"
+		if job != nil {
+			src := m.slotLabelForJobPath(job, job.Src)
+			dst := m.slotLabelForJobPath(job, job.Dst)
+			op := job.Op
+			if op == "" {
+				if job.Src == job.Dst {
+					op = "erase"
+				} else {
+					op = "copy"
+				}
+			}
+			if op == "erase" {
+				actionLine = fmt.Sprintf("ERASE %s", src)
+			} else {
+				actionLine = fmt.Sprintf("COPY %s -> %s", src, dst)
+			}
+		}
+		yes := "[YES]"
+		no := "[no]"
+		if m.cancelChoice == 0 {
+			yes = "[YES]"
+			no = "[no]"
+		} else {
+			yes = "[yes]"
+			no = "[NO]"
+		}
+		choiceLine := fmt.Sprintf("%s   %s", yes, no)
+		if m.cancelChoice == 0 {
+			yes = style(yes, ansiBgWhite+ansiBlack)
+		} else {
+			no = style(no, ansiBgWhite+ansiBlack)
+		}
+		choiceLine = center(fmt.Sprintf("%s   %s", yes, no), fmt.Sprintf("%s   %s", "[YES]", "[NO]"))
+		b.WriteString("\n+------------------------------------------+\n")
+		b.WriteString(fmt.Sprintf("| %s |\n", center("Cancel selected job?", "Cancel selected job?")))
+		b.WriteString(fmt.Sprintf("| %s |\n", center(actionLine, actionLine)))
+		b.WriteString(fmt.Sprintf("| %s |\n", center("", "")))
+		b.WriteString(fmt.Sprintf("| %s |\n", choiceLine))
+		b.WriteString("+------------------------------------------+\n")
 	}
 	return b.String()
 }
