@@ -1,5 +1,11 @@
 package tui
 
+import (
+	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+)
+
 const (
 	ansiReset   = "\x1b[0m"
 	ansiBold    = "\x1b[1m"
@@ -13,5 +19,30 @@ const (
 )
 
 func style(s, code string) string {
-	return code + s + ansiReset
+	st := lipgloss.NewStyle()
+	if strings.Contains(code, ansiBold) {
+		st = st.Bold(true)
+	}
+	if strings.Contains(code, ansiRev) {
+		st = st.Reverse(true)
+	}
+	if strings.Contains(code, ansiBlack) {
+		st = st.Foreground(lipgloss.Color("0"))
+	}
+	if strings.Contains(code, ansiBgWhite) {
+		st = st.Background(lipgloss.Color("15"))
+	}
+	if strings.Contains(code, ansiCyan) {
+		st = st.Foreground(lipgloss.Color("6"))
+	}
+	if strings.Contains(code, ansiYellow) {
+		st = st.Foreground(lipgloss.Color("3"))
+	}
+	if strings.Contains(code, ansiRed) {
+		st = st.Foreground(lipgloss.Color("1"))
+	}
+	if strings.Contains(code, ansiGreen) {
+		st = st.Foreground(lipgloss.Color("2"))
+	}
+	return st.Render(s)
 }
