@@ -41,17 +41,36 @@ func (m *modelState) updateAction(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *modelState) viewAction() string {
-	e := m.cfg.Enclosures[m.selectedEnc]
-	src := m.devicePath(e, m.srcSlot)
-	var b strings.Builder
-	b.WriteString(fmt.Sprintf("Select operation for slot %d (%s)\n\n", m.srcSlot, src))
-	for i, label := range actionLabels {
-		mark := "  "
-		if i == m.actionCursor {
-			mark = "> "
+	const popupInnerWidth = 40
+	center := func(rendered, plain string) string {
+		if len(plain) >= popupInnerWidth {
+			return plain[:popupInnerWidth]
 		}
-		b.WriteString(mark + label + "\n")
+		left := (popupInnerWidth - len(plain)) / 2
+		right := popupInnerWidth - len(plain) - left
+		return strings.Repeat(" ", left) + rendered + strings.Repeat(" ", right)
 	}
-	b.WriteString("\nEnter: select  Esc: back")
+	pad := func(rendered, plain string) string {
+		if len(plain) >= popupInnerWidth {
+			return plain[:popupInnerWidth]
+		}
+		return rendered + strings.Repeat(" ", popupInnerWidth-len(plain))
+	}
+	slot := fmt.Sprintf("Slot%02d", m.srcSlot)
+	var b strings.Builder
+	b.WriteString("\n+------------------------------------------+\n")
+	b.WriteString(fmt.Sprintf("| %s |\n", center("Select operation", "Select operation")))
+	b.WriteString(fmt.Sprintf("| %s |\n", center(slot, slot)))
+	b.WriteString(fmt.Sprintf("| %s |\n", center("", "")))
+	for i, label := range actionLabels {
+		plain := "  " + label
+		line := plain
+		if i == m.actionCursor {
+			plain = "> " + label
+			line = style(plain, ansiBgWhite+ansiBlack)
+		}
+		b.WriteString(fmt.Sprintf("| %s |\n", pad(line, plain)))
+	}
+	b.WriteString("+------------------------------------------+")
 	return b.String()
 }

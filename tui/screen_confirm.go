@@ -45,17 +45,32 @@ func (m *modelState) updateConfirm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *modelState) viewConfirm() string {
-	e := m.cfg.Enclosures[m.selectedEnc]
-	src := m.devicePath(e, m.srcSlot)
+	const popupInnerWidth = 40
+	center := func(rendered, plain string) string {
+		if len(plain) >= popupInnerWidth {
+			return plain[:popupInnerWidth]
+		}
+		left := (popupInnerWidth - len(plain)) / 2
+		right := popupInnerWidth - len(plain) - left
+		return strings.Repeat(" ", left) + rendered + strings.Repeat(" ", right)
+	}
 	if m.confirmCode == "" {
 		m.confirmCode = randomConfirmCode()
 	}
-	title := "Confirm copy"
-	detail := fmt.Sprintf("Enclosure: %s\nSource slot: %d (%s)\nDest slot:   %d (%s)", e.Name, m.srcSlot, src, m.dstSlot, m.devicePath(e, m.dstSlot))
+	title := "Confirm COPY"
+	actionLine := fmt.Sprintf("COPY Slot%02d -> Slot%02d", m.srcSlot, m.dstSlot)
 	if m.selectedOp == opErase {
-		title = "Confirm erase"
-		detail = fmt.Sprintf("Enclosure: %s\nTarget slot: %d (%s)", e.Name, m.srcSlot, src)
+		title = "Confirm ERASE"
+		actionLine = fmt.Sprintf("ERASE Slot%02d", m.srcSlot)
 	}
 	masked := strings.Repeat("*", len(m.confirmInput))
-	return fmt.Sprintf("%s\n\n%s\n\nCode: %s\nInput: %s\n\nType the code and press Enter.\nBackspace: delete  Esc: back", title, detail, m.confirmCode, masked)
+	var b strings.Builder
+	b.WriteString("\n+------------------------------------------+\n")
+	b.WriteString(fmt.Sprintf("| %s |\n", center(title, title)))
+	b.WriteString(fmt.Sprintf("| %s |\n", center(actionLine, actionLine)))
+	b.WriteString(fmt.Sprintf("| %s |\n", center("", "")))
+	b.WriteString(fmt.Sprintf("| %s |\n", center("Code: "+m.confirmCode, "Code: "+m.confirmCode)))
+	b.WriteString(fmt.Sprintf("| %s |\n", center("Input: "+masked, "Input: "+masked)))
+	b.WriteString("+------------------------------------------+")
+	return b.String()
 }
