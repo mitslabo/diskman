@@ -5,8 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"diskman/model"
-
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -177,19 +175,25 @@ func (m *modelState) viewDisk() string {
 		if j == nil {
 			continue
 		}
-		state := string(j.State)
-		if j.State == model.JobRunning {
-			state = style(state, ansiGreen)
+		rate := j.Progress.Rate
+		if rate == "" {
+			rate = "-"
+		}
+		remain := j.Progress.Remaining
+		if remain == "" {
+			remain = "-"
 		}
 		op := j.Op
 		if op == "" {
 			op = "copy"
 		}
-		mark := " "
-		if i == m.jobSel {
-			mark = ">"
+		n := i + 1
+		src := m.slotLabelForJobPath(j, j.Src)
+		dst := m.slotLabelForJobPath(j, j.Dst)
+		line := fmt.Sprintf("[%d] ERASE %s  Rate %s  Remain: %s", n, src, rate, remain)
+		if op == "copy" {
+			line = fmt.Sprintf("[%d] COPY %s -> %s  Progress: %.1f%%  Rate %s  Remain: %s", n, src, dst, j.Progress.Percent, rate, remain)
 		}
-		line := fmt.Sprintf("%s %s op:%s pass:%d %5.1f%% rate:%s state:%s", mark, j.ID, op, j.Progress.Pass, j.Progress.Percent, j.Progress.Rate, state)
 		if i == m.jobSel && m.jobFocus {
 			line = style(line, ansiRev)
 		}

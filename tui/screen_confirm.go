@@ -2,7 +2,6 @@ package tui
 
 import (
 	"fmt"
-	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -54,13 +53,12 @@ func (m *modelState) viewConfirm() string {
 		title = "Confirm ERASE"
 		actionLine = fmt.Sprintf("ERASE Slot%02d", m.srcSlot)
 	}
-	masked := strings.Repeat("*", len(m.confirmInput))
 	lines := []string{
 		popupCenter(title, title),
 		popupCenter(actionLine, actionLine),
 		popupCenter("", ""),
 		popupCenter("Code: "+m.confirmCode, "Code: "+m.confirmCode),
-		popupCenter("Input: "+masked, "Input: "+masked),
+		popupCenter("Input: "+m.confirmInput, "Input: "+m.confirmInput),
 	}
 	return popupFrame(lines)
 }
