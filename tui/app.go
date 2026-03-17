@@ -160,6 +160,7 @@ func (m *modelState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			j.State = u.State
 			if u.Err != nil {
 				j.ErrMsg = u.Err.Error()
+				m.status = "job error: " + j.ErrMsg
 			}
 			if u.Completed || u.Cancelled || u.State == model.JobError {
 				delete(m.jobCancels, u.JobID)
@@ -304,8 +305,7 @@ func (m *modelState) startEraseJob() {
 		State:     model.JobPending,
 		CreatedAt: time.Now(),
 	}
-	// Erase is simulated with dry-run style progress for safety.
-	m.launchJob(job, true)
+	m.launchJob(job, m.dryRun)
 	m.status = "erase job started"
 }
 

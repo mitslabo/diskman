@@ -25,11 +25,12 @@ func Load(path string, configSpecified bool) (Config, bool, error) {
 		return defaultCfg, false, nil
 	}
 	path = expandHome(path)
+	_ = path // expanded
 	b, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			if !configSpecified {
-				return defaultCfg, false, nil
+				return defaultCfg, false, nil // paths already resolved in defaultConfig()
 			}
 			return Config{}, false, err
 		}
@@ -44,7 +45,15 @@ func Load(path string, configSpecified bool) (Config, bool, error) {
 			return Config{}, false, err
 		}
 	}
-	userCfg.LogFile = expandHome(userCfg.LogFile)
-	userCfg.MapDir = expandHome(userCfg.MapDir)
+	if userCfg.LogFile != "" {
+		userCfg.LogFile = expandHome(userCfg.LogFile)
+	} else {
+		userCfg.LogFile = defaultCfg.LogFile
+	}
+	if userCfg.MapDir != "" {
+		userCfg.MapDir = expandHome(userCfg.MapDir)
+	} else {
+		userCfg.MapDir = defaultCfg.MapDir
+	}
 	return userCfg, true, nil
 }

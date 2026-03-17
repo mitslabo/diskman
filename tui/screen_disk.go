@@ -195,9 +195,16 @@ func (m *modelState) viewDisk() string {
 		n := i + 1
 		src := m.slotLabelForJobPath(j, j.Src)
 		dst := m.slotLabelForJobPath(j, j.Dst)
-		line := fmt.Sprintf("[%d] ERASE %s  Rate %s  Remain: %s", n, src, rate, remain)
-		if op == "copy" {
-			line = fmt.Sprintf("[%d] COPY %s -> %s  Progress: %.1f%%  Rate %s  Remain: %s", n, src, dst, j.Progress.Percent, rate, remain)
+		elapsed := formatElapsed(time.Since(j.CreatedAt))
+		written := j.Progress.Rescued
+		if written == "" {
+			written = "-"
+		}
+		var line string
+		if op == "erase" {
+			line = fmt.Sprintf("[%d] ERASE %s  Rate: %s  Elapsed: %s  Written: %s", n, src, rate, elapsed, written)
+		} else {
+			line = fmt.Sprintf("[%d] COPY %s -> %s  Progress: %.1f%%  Rate: %s  Remain: %s", n, src, dst, j.Progress.Percent, rate, remain)
 		}
 		if i == m.jobSel && m.jobFocus {
 			line = style(line, ansiRev)
@@ -251,4 +258,15 @@ func (m *modelState) viewDisk() string {
 		}) + "\n")
 	}
 	return b.String()
+}
+
+// formatElapsed formats a duration as d.HH:MM:SS.
+func formatElapsed(d time.Duration) string {
+	d = d.Truncate(time.Second)
+	totalSec := int(d.Seconds())
+	days := totalSec / 86400
+	hours := (totalSec % 86400) / 3600
+	mins := (totalSec % 3600) / 60
+	secs := totalSec % 60
+	return fmt.Sprintf("%d.%02d:%02d:%02d", days, hours, mins, secs)
 }
