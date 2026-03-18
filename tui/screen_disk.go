@@ -245,9 +245,9 @@ func (m *modelState) viewDisk() string {
 		}
 		choiceLine := fmt.Sprintf("%s   %s", yes, no)
 		if m.cancelChoice == 0 {
-			yes = style(yes, ansiBgWhite+ansiBlack)
+			yes = style(yes, ansiRev)
 		} else {
-			no = style(no, ansiBgWhite+ansiBlack)
+			no = style(no, ansiRev)
 		}
 		choiceLine = popupCenter(fmt.Sprintf("%s   %s", yes, no), fmt.Sprintf("%s   %s", "[YES]", "[NO]"))
 		b.WriteString(popupFrame([]string{

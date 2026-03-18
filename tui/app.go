@@ -174,14 +174,15 @@ func (m *modelState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *modelState) View() string {
-	header := "diskman"
+	title := style("== diskman (disk management tool) ==", ansiBold)
+	header := title
 	if m.dryRun {
 		header += " " + style("[DRY-RUN]", ansiYellow)
 	}
 	if m.debug {
 		header += " " + style("[DEBUG]", ansiCyan)
 	}
-	head := style(header, ansiBold)
+	head := header
 	if m.status != "" {
 		head += "\n" + style(m.status, ansiRed)
 	}
