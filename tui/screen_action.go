@@ -49,13 +49,11 @@ func (m *modelState) viewAction() string {
 		popupCenter("", ""),
 	}
 	for i, label := range actionLabels {
-		plain := "  " + label
-		line := plain
+		mark := "  "
 		if i == m.actionCursor {
-			plain = "> " + label
-			line = style(plain, ansiBgWhite+ansiBlack)
+			mark = "> "
 		}
-		lines = append(lines, popupPadRight(line, plain))
+		lines = append(lines, popupPadRight(mark+label, mark+label))
 	}
 	return popupFrame(lines)
 }

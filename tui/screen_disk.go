@@ -165,10 +165,11 @@ func (m *modelState) viewDisk() string {
 			if slot == m.dstSlot {
 				cell = style(cell, ansiYellow)
 			}
+			prefix := "  "
 			if r == m.row && c == m.col && !m.jobFocus {
-				cell = style(cell, ansiRev)
+				prefix = "> "
 			}
-			b.WriteString(cell)
+			b.WriteString(prefix + cell)
 			if c < e.Cols-1 {
 				b.WriteString("  ")
 			}
@@ -213,10 +214,11 @@ func (m *modelState) viewDisk() string {
 		} else {
 			line = fmt.Sprintf("[%d] COPY %s -> %s  Progress: %.1f%%  Rate: %s  Remain: %s", n, src, dst, j.Progress.Percent, rate, remain)
 		}
+		mark := "  "
 		if i == m.jobSel && m.jobFocus {
-			line = style(line, ansiRev)
+			mark = "> "
 		}
-		b.WriteString(line + "\n")
+		b.WriteString(mark + line + "\n")
 	}
 	if len(activeIDs) == 0 {
 		b.WriteString("- none\n")
@@ -241,22 +243,14 @@ func (m *modelState) viewDisk() string {
 				actionLine = fmt.Sprintf("COPY %s -> %s", src, dst)
 			}
 		}
-		yes := "[YES]"
-		no := "[no]"
+		yesLabel := "  yes"
+		noLabel := "  no"
 		if m.cancelChoice == 0 {
-			yes = "[YES]"
-			no = "[no]"
+			yesLabel = "> YES"
 		} else {
-			yes = "[yes]"
-			no = "[NO]"
+			noLabel = "> NO"
 		}
-		choiceLine := fmt.Sprintf("%s   %s", yes, no)
-		if m.cancelChoice == 0 {
-			yes = style(yes, ansiRev)
-		} else {
-			no = style(no, ansiRev)
-		}
-		choiceLine = popupCenter(fmt.Sprintf("%s   %s", yes, no), fmt.Sprintf("%s   %s", "[YES]", "[NO]"))
+		choiceLine := popupCenter(fmt.Sprintf("%s   %s", yesLabel, noLabel), fmt.Sprintf("%s   %s", yesLabel, noLabel))
 		b.WriteString(popupFrame([]string{
 			popupCenter("Cancel selected job?", "Cancel selected job?"),
 			popupCenter(actionLine, actionLine),

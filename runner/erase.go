@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"diskman/model"
@@ -38,7 +39,6 @@ func runErase(ctx context.Context, job model.Job, out chan<- Update) error {
 		"if=/dev/zero",
 		"of="+job.Dst,
 		"bs=1M",
-		"status=progress",
 	)
 
 	stderr, err := cmd.StderrPipe()
@@ -49,6 +49,25 @@ func runErase(ctx context.Context, job model.Job, out chan<- Update) error {
 		return err
 	}
 
+	// status=progress は古い dd では使えないため、SIGUSR1 を定期送信して
+	// dd に統計を stderr へ出力させる（出力形式は status=progress と同じ）。
+	sigCtx, cancelSig := context.WithCancel(ctx)
+	go func() {
+		defer cancelSig()
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-sigCtx.Done():
+				return
+			case <-ticker.C:
+				if cmd.Process != nil {
+					_ = cmd.Process.Signal(syscall.SIGUSR1)
+				}
+			}
+		}
+	}()
+
 	p := model.Progress{Pass: 1}
 	var stderrBuf bytes.Buffer
 	errCh := make(chan error, 1)
@@ -57,6 +76,7 @@ func runErase(ctx context.Context, job model.Job, out chan<- Update) error {
 	}()
 
 	waitErr := cmd.Wait()
+	cancelSig()
 	_ = <-errCh
 
 	if waitErr != nil {
