@@ -6,21 +6,11 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-
-	tea "github.com/charmbracelet/bubbletea"
 )
 
-func (m *modelState) updateInfo(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "enter", "esc":
-		m.screen = scrSrc
-	}
-	return m, nil
-}
-
-func (m *modelState) viewInfo() string {
+func (m *modelState) renderInfoPopup() string {
 	e := m.cfg.Enclosures[m.selectedEnc]
-	src := m.devicePath(e, m.srcSlot)
+	src := m.devicePath(e, m.infoSlot)
 	model, serial, size := getDiskInfo(src)
 	if model == "" {
 		model = "N/A"
@@ -31,16 +21,19 @@ func (m *modelState) viewInfo() string {
 	if size == "" {
 		size = "N/A"
 	}
-
-	var b strings.Builder
-	b.WriteString("Disk information\n\n")
-	b.WriteString(fmt.Sprintf("Slot: %d\n", m.srcSlot))
-	b.WriteString(fmt.Sprintf("Device: %s\n", src))
-	b.WriteString(fmt.Sprintf("Model: %s\n", model))
-	b.WriteString(fmt.Sprintf("Serial: %s\n", serial))
-	b.WriteString(fmt.Sprintf("Capacity: %s\n", size))
-	b.WriteString("\nEnter/Esc: back")
-	return b.String()
+	slot := fmt.Sprintf("Slot%02d", m.infoSlot)
+	lines := []string{
+		popupCenter("Disk Information", "Disk Information"),
+		popupCenter("", ""),
+		popupPadRight("Device: "+src, "Device: "+src),
+		popupPadRight("Slot:   "+slot, "Slot:   "+slot),
+		popupPadRight("Model:  "+model, "Model:  "+model),
+		popupPadRight("Serial: "+serial, "Serial: "+serial),
+		popupPadRight("Size:   "+size, "Size:   "+size),
+		popupCenter("", ""),
+		popupCenter("Enter / Esc: close", "Enter / Esc: close"),
+	}
+	return popupFrame(lines)
 }
 
 func getDiskInfo(devicePath string) (model string, serial string, size string) {

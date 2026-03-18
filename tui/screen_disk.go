@@ -106,6 +106,13 @@ func (m *modelState) updateDisk(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.dstSlot = slot
 			m.startConfirmation()
 		}
+	case "i":
+		if !m.jobFocus {
+			e := m.cfg.Enclosures[m.selectedEnc]
+			m.infoSlot = e.Grid[m.row][m.col]
+			m.infoPopup = true
+			m.infoPrevScreen = m.screen
+		}
 	case "esc":
 		m.jobFocus = false
 		m.cancelPopup = false

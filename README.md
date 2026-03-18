@@ -10,11 +10,13 @@ flowchart TB
   operationSelect["操作選択画面"]
   destinationDiskSelect["ディスク選択画面<br/>コピー先ディスク選択"]
   confirmByCode["実行確認画面<br/>表示された数字の一致確認"]
-  diskInfo["情報表示画面（ダミー）"]
+  diskInfoPopup["ディスク情報ポップアップ<br/>/sys/block から取得"]
 
   start --> enclosureSelect
   enclosureSelect --> sourceDiskSelect
-  sourceDiskSelect --> operationSelect
+  sourceDiskSelect -- "Enter" --> operationSelect
+  sourceDiskSelect -- "i" --> diskInfoPopup
+  diskInfoPopup -. "Enter / Esc" .-> sourceDiskSelect
 
   operationSelect -- "コピー" --> destinationDiskSelect
   destinationDiskSelect --> confirmByCode
@@ -25,8 +27,7 @@ flowchart TB
   confirmByCode -. "Esc(削除)" .-> operationSelect
   operationSelect -. "Esc" .-> sourceDiskSelect
 
-  operationSelect -- "情報表示" --> diskInfo
-  diskInfo --> sourceDiskSelect
+  operationSelect -- "情報表示" --> diskInfoPopup
 ```
 
 ## 利用方法
@@ -48,6 +49,7 @@ go run main.go --debug --dry-run
 - ジョブ選択中に `Enter`: キャンセル確認ポップアップを表示
 - キャンセル確認ポップアップで `← / →`: Yes/No 選択
 - キャンセル確認ポップアップで `Enter`: 確定、`Esc`: 閉じる
+- `i`: ディスク選択画面でカーソル位置のディスク情報ポップアップを表示
 - `q`: 終了（実行中ジョブがある場合は終了不可）
 
 ### フロー
@@ -58,10 +60,14 @@ go run main.go --debug --dry-run
 1. ディスク選択（コピー先）
 1. 実行確認画面で表示された数字を入力し、`Enter` で開始
 
-1. 情報表示
+1. 情報表示（その1: キーショートカット）
+1. ディスク選択画面でカーソルをディスクに合わせ `i` を押す
+1. ディスク情報ポップアップが表示される（`Enter` / `Esc` で閉じる）
+
+1. 情報表示（その2: 操作選択経由）
 1. ディスク選択
 1. 操作選択で「情報表示」
-1. ダミー情報を表示（`Enter` / `Esc` で戻る）
+1. 同じディスク情報ポップアップが表示される（`Enter` / `Esc` で戻る）
 
 1. 削除
 1. ディスク選択

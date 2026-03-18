@@ -30,7 +30,9 @@ func (m *modelState) updateAction(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.startConfirmation()
 		case 2:
 			m.selectedOp = opInfo
-			m.screen = scrInfo
+			m.infoSlot = m.srcSlot
+			m.infoPopup = true
+			m.infoPrevScreen = scrAction
 		}
 	case "esc":
 		m.screen = scrSrc
