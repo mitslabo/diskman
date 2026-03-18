@@ -158,7 +158,7 @@ func (m *modelState) viewDisk() string {
 			if slot == m.dstSlot {
 				cell = style(cell, ansiYellow)
 			}
-			if r == m.row && c == m.col {
+			if r == m.row && c == m.col && !m.jobFocus {
 				cell = style(cell, ansiRev)
 			}
 			b.WriteString(cell)
