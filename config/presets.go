@@ -1,6 +1,11 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+)
 
 func defaultDevices(grid [][]int) map[string]string {
 	devices := map[string]string{}
@@ -16,34 +21,79 @@ func defaultDevices(grid [][]int) map[string]string {
 	return devices
 }
 
+// userDataDir returns the OS-appropriate user data directory.
+// Linux:   $XDG_DATA_HOME  or  ~/.local/share
+// macOS:   ~/Library/Application Support
+// Windows: %AppData%
+func userDataDir() (string, error) {
+	switch runtime.GOOS {
+	case "windows":
+		dir := os.Getenv("AppData")
+		if dir == "" {
+			return "", os.ErrNotExist
+		}
+		return dir, nil
+	case "darwin":
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		return filepath.Join(home, "Library", "Application Support"), nil
+	default: // Linux / BSD
+		if dir := os.Getenv("XDG_DATA_HOME"); dir != "" && filepath.IsAbs(dir) {
+			return dir, nil
+		}
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		return filepath.Join(home, ".local", "share"), nil
+	}
+}
+
+func defaultDataDir() string {
+	if d, err := userDataDir(); err == nil {
+		return filepath.Join(d, "diskman")
+	}
+	return "diskman"
+}
+
 func defaultConfig() Config {
+	dataDir := defaultDataDir()
 	return Config{
-		LogFile: "~/.local/share/diskman/jobs.jsonl",
-		MapDir:  "~/.local/share/diskman/maps",
+		LogFile: filepath.Join(dataDir, "jobs.jsonl"),
+		MapDir:  filepath.Join(dataDir, "maps"),
 		Enclosures: []Enclosure{
 			{
-				Name:    "Standard 2-bay",
+				Name:    "2-bay",
 				Rows:    2,
 				Cols:    1,
 				Grid:    [][]int{{1}, {2}},
 				Devices: defaultDevices([][]int{{1}, {2}}),
 			},
 			{
-				Name:    "Standard 4-bay",
-				Rows:    2,
-				Cols:    2,
-				Grid:    [][]int{{1, 2}, {3, 4}},
-				Devices: defaultDevices([][]int{{1, 2}, {3, 4}}),
+				Name:    "4-bay",
+				Rows:    4,
+				Cols:    1,
+				Grid:    [][]int{{1}, {2}, {3}, {4}},
+				Devices: defaultDevices([][]int{{1}, {2}, {3}, {4}}),
 			},
 			{
-				Name:    "Standard 6-bay",
-				Rows:    3,
-				Cols:    2,
-				Grid:    [][]int{{1, 4}, {2, 5}, {3, 6}},
-				Devices: defaultDevices([][]int{{1, 4}, {2, 5}, {3, 6}}),
+				Name:    "6-bay",
+				Rows:    6,
+				Cols:    1,
+				Grid:    [][]int{{1}, {2}, {3}, {4}, {5}, {6}},
+				Devices: defaultDevices([][]int{{1}, {2}, {3}, {4}, {5}, {6}}),
 			},
 			{
-				Name:    "Standard 12-bay",
+				Name:    "8-bay",
+				Rows:    4,
+				Cols:    2,
+				Grid:    [][]int{{1, 5}, {2, 6}, {3, 7}, {4, 8}},
+				Devices: defaultDevices([][]int{{1, 5}, {2, 6}, {3, 7}, {4, 8}}),
+			},
+			{
+				Name:    "12-bay",
 				Rows:    3,
 				Cols:    4,
 				Grid:    [][]int{{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}},

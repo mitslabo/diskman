@@ -4,13 +4,24 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"diskman/config"
 	"diskman/tui"
 )
 
+func defaultConfigPath() string {
+	if d, err := os.UserConfigDir(); err == nil {
+		return filepath.Join(d, "diskman", "config.json")
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		return filepath.Join(home, ".config", "diskman", "config.json")
+	}
+	return "config.json"
+}
+
 func main() {
-	configPath := flag.String("config", "~/.config/diskman/config.json", "path to config file")
+	configPath := flag.String("config", defaultConfigPath(), "path to config file")
 	dryRun := flag.Bool("dry-run", false, "do not execute ddrescue; simulate progress")
 	debug := flag.Bool("debug", false, "enable debug mode with mock /dev/diskN paths and dry-run")
 	flag.Parse()

@@ -63,6 +63,9 @@ type modelState struct {
 	cancelPopup   bool
 	cancelChoice  int
 	cancelJobID   string
+	infoPopup      bool
+	infoPrevScreen screen
+	infoSlot       int
 }
 
 type tickMsg time.Time
@@ -138,6 +141,14 @@ func (m *modelState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, tea.Quit
 		}
+		if m.infoPopup {
+			switch s {
+			case "enter", "esc":
+				m.infoPopup = false
+				m.screen = m.infoPrevScreen
+			}
+			return m, nil
+		}
 		if m.screen == scrEnclosure {
 			return m.updateEnclosure(msg)
 		}
@@ -150,9 +161,6 @@ func (m *modelState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.screen == scrConfirm {
 			return m.updateConfirm(msg)
 		}
-		if m.screen == scrInfo {
-			return m.updateInfo(msg)
-		}
 	case updateMsg:
 		u := runner.Update(msg)
 		if j, ok := m.jobs[u.JobID]; ok {
@@ -160,6 +168,7 @@ func (m *modelState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			j.State = u.State
 			if u.Err != nil {
 				j.ErrMsg = u.Err.Error()
+				m.status = "job error: " + j.ErrMsg
 			}
 			if u.Completed || u.Cancelled || u.State == model.JobError {
 				delete(m.jobCancels, u.JobID)
@@ -173,30 +182,34 @@ func (m *modelState) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *modelState) View() string {
-	header := "diskman"
+	title := style("== diskman (disk management tool) ==", ansiBold)
+	header := title
 	if m.dryRun {
 		header += " " + style("[DRY-RUN]", ansiYellow)
 	}
 	if m.debug {
 		header += " " + style("[DEBUG]", ansiCyan)
 	}
-	head := style(header, ansiBold)
+	head := header
+	head += "\n" + "q: quit  /  i: disk information"
 	if m.status != "" {
 		head += "\n" + style(m.status, ansiRed)
 	}
+	var content string
 	switch m.screen {
 	case scrEnclosure:
-		return head + "\n\n" + m.viewEnclosure()
+		content = m.viewEnclosure()
 	case scrSrc, scrDst:
-		return head + "\n\n" + m.viewDisk()
+		content = m.viewDisk()
 	case scrAction:
-		return head + "\n\n" + m.viewAction()
+		content = m.viewAction()
 	case scrConfirm:
-		return head + "\n\n" + m.viewConfirm()
-	case scrInfo:
-		return head + "\n\n" + m.viewInfo()
+		content = m.viewConfirm()
 	}
-	return head
+	if m.infoPopup {
+		content += m.renderInfoPopup()
+	}
+	return head + "\n\n" + content
 }
 
 func (m *modelState) hasRunningJobs() bool {
@@ -304,8 +317,7 @@ func (m *modelState) startEraseJob() {
 		State:     model.JobPending,
 		CreatedAt: time.Now(),
 	}
-	// Erase is simulated with dry-run style progress for safety.
-	m.launchJob(job, true)
+	m.launchJob(job, m.dryRun)
 	m.status = "erase job started"
 }
 

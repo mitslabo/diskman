@@ -106,6 +106,13 @@ func (m *modelState) updateDisk(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.dstSlot = slot
 			m.startConfirmation()
 		}
+	case "i":
+		if !m.jobFocus {
+			e := m.cfg.Enclosures[m.selectedEnc]
+			m.infoSlot = e.Grid[m.row][m.col]
+			m.infoPopup = true
+			m.infoPrevScreen = m.screen
+		}
 	case "esc":
 		m.jobFocus = false
 		m.cancelPopup = false
@@ -158,10 +165,11 @@ func (m *modelState) viewDisk() string {
 			if slot == m.dstSlot {
 				cell = style(cell, ansiYellow)
 			}
-			if r == m.row && c == m.col {
-				cell = style(cell, ansiRev)
+			prefix := "  "
+			if r == m.row && c == m.col && !m.jobFocus {
+				prefix = "> "
 			}
-			b.WriteString(cell)
+			b.WriteString(prefix + cell)
 			if c < e.Cols-1 {
 				b.WriteString("  ")
 			}
@@ -195,14 +203,22 @@ func (m *modelState) viewDisk() string {
 		n := i + 1
 		src := m.slotLabelForJobPath(j, j.Src)
 		dst := m.slotLabelForJobPath(j, j.Dst)
-		line := fmt.Sprintf("[%d] ERASE %s  Rate %s  Remain: %s", n, src, rate, remain)
-		if op == "copy" {
-			line = fmt.Sprintf("[%d] COPY %s -> %s  Progress: %.1f%%  Rate %s  Remain: %s", n, src, dst, j.Progress.Percent, rate, remain)
+		elapsed := formatElapsed(time.Since(j.CreatedAt))
+		written := j.Progress.Rescued
+		if written == "" {
+			written = "-"
 		}
+		var line string
+		if op == "erase" {
+			line = fmt.Sprintf("[%d] ERASE %s  Rate: %s  Elapsed: %s  Written: %s", n, src, rate, elapsed, written)
+		} else {
+			line = fmt.Sprintf("[%d] COPY %s -> %s  Progress: %.1f%%  Rate: %s  Remain: %s", n, src, dst, j.Progress.Percent, rate, remain)
+		}
+		mark := "  "
 		if i == m.jobSel && m.jobFocus {
-			line = style(line, ansiRev)
+			mark = "> "
 		}
-		b.WriteString(line + "\n")
+		b.WriteString(mark + line + "\n")
 	}
 	if len(activeIDs) == 0 {
 		b.WriteString("- none\n")
@@ -227,22 +243,14 @@ func (m *modelState) viewDisk() string {
 				actionLine = fmt.Sprintf("COPY %s -> %s", src, dst)
 			}
 		}
-		yes := "[YES]"
-		no := "[no]"
+		yesLabel := "  yes"
+		noLabel := "  no"
 		if m.cancelChoice == 0 {
-			yes = "[YES]"
-			no = "[no]"
+			yesLabel = "> YES"
 		} else {
-			yes = "[yes]"
-			no = "[NO]"
+			noLabel = "> NO"
 		}
-		choiceLine := fmt.Sprintf("%s   %s", yes, no)
-		if m.cancelChoice == 0 {
-			yes = style(yes, ansiBgWhite+ansiBlack)
-		} else {
-			no = style(no, ansiBgWhite+ansiBlack)
-		}
-		choiceLine = popupCenter(fmt.Sprintf("%s   %s", yes, no), fmt.Sprintf("%s   %s", "[YES]", "[NO]"))
+		choiceLine := popupCenter(fmt.Sprintf("%s   %s", yesLabel, noLabel), fmt.Sprintf("%s   %s", yesLabel, noLabel))
 		b.WriteString(popupFrame([]string{
 			popupCenter("Cancel selected job?", "Cancel selected job?"),
 			popupCenter(actionLine, actionLine),
@@ -251,4 +259,15 @@ func (m *modelState) viewDisk() string {
 		}) + "\n")
 	}
 	return b.String()
+}
+
+// formatElapsed formats a duration as d.HH:MM:SS.
+func formatElapsed(d time.Duration) string {
+	d = d.Truncate(time.Second)
+	totalSec := int(d.Seconds())
+	days := totalSec / 86400
+	hours := (totalSec % 86400) / 3600
+	mins := (totalSec % 3600) / 60
+	secs := totalSec % 60
+	return fmt.Sprintf("%d.%02d:%02d:%02d", days, hours, mins, secs)
 }

@@ -14,7 +14,9 @@ flowchart TB
 
   start --> enclosureSelect
   enclosureSelect --> sourceDiskSelect
-  sourceDiskSelect --> operationSelect
+  sourceDiskSelect -- "Enter" --> operationSelect
+  sourceDiskSelect -- "i" --> diskInfoPopup
+  diskInfoPopup -. "Enter / Esc" .-> sourceDiskSelect
 
   operationSelect -- "Copy" --> destinationDiskSelect
   destinationDiskSelect --> confirmByCode
