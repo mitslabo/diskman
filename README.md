@@ -33,13 +33,23 @@ flowchart TB
 
 ## Usage
 
+### Build
+
+```bash
+go build -o diskman
+```
+
 ### Startup
 
 ```bash
-go run main.go --debug --dry-run
+./diskman
 ```
 
-When `--debug` is enabled, `/dev/diskN` is assigned to unset slots.
+For binary execution with options:
+
+```bash
+./diskman --config ~/.config/diskman/config.json
+```
 
 ### Basic Operations
 
@@ -80,7 +90,19 @@ On the disk selection screen, the following labels are displayed based on runnin
 
 In-use disks cannot be selected.
 
-## Windows ddrescue Testing
+## Debug & Development
+
+### Running from Source
+
+For development and debugging:
+
+```bash
+go run main.go --debug --dry-run
+```
+
+When `--debug` is enabled, `/dev/diskN` is assigned to unset slots.
+
+### Windows ddrescue Testing
 
 On Windows, verify in the following order for safety:
 
@@ -88,7 +110,7 @@ On Windows, verify in the following order for safety:
 2. Verify behavior closer to block devices in VM
 3. Final verification on physical disk if necessary
 
-### 1. WSL2 (Recommended)
+#### 1. WSL2 (Recommended)
 
 Start with a file-based pseudo-disk. This allows verification of `Rate` / `Remain` / `pct rescued` without risking actual disks.
 
@@ -131,7 +153,7 @@ ddrescue -f src.img dst.img run1.map
 cat run1.map
 ```
 
-### 2. VM (Verification closer to physical hardware)
+#### 2. VM (Verification closer to physical hardware)
 
 Connect two additional disks to a Linux VM (Ubuntu recommended) and verify copying between `/dev/sdX` devices.
 
@@ -149,7 +171,7 @@ Warning:
 - Incorrect disk specification will destroy data.
 - Always connect only test disks before executing.
 
-### 3. Docker (Supplementary)
+#### 3. Docker (Supplementary)
 
 Docker Desktop has limitations for direct block device access, so file-based verification is recommended.
 
